@@ -16,17 +16,95 @@ var 字表 = {
 
 var 词表 = ["中国人", "你好", "中国", "人民", "北京"];
 
+var 数号 = "3456";
+
+var 数字点位 = {
+  "0": "245",
+  "1": "1",
+  "2": "12",
+  "3": "14",
+  "4": "145",
+  "5": "15",
+  "6": "124",
+  "7": "1245",
+  "8": "125",
+  "9": "24"
+};
+
+var 标点点位 = {
+  "。": ["5", "23"],
+  "，": ["5"],
+  "？": ["5", "3"],
+  "！": ["56", "2"]
+};
+
 function 主程序(参数) {
   if (参数.length !== 1) {
     process.stderr.write("没法点字：认不出\n");
     return 2;
   }
-  var 字 = 参数[0];
-  if (字.length !== 1 || !字表[字]) {
+  var 句子 = 参数[0];
+  if (句子.length === 0) {
     process.stderr.write("没法点字：认不出\n");
     return 2;
   }
-  process.stdout.write(字表[字].带调.join(" ") + "\n");
+
+  var 各方 = [];
+  var 位置 = 0;
+  var 上一个是词 = false;
+
+  while (位置 < 句子.length) {
+    var 当前 = 句子.charAt(位置);
+    if (数字点位.hasOwnProperty(当前)) {
+      var 数字 = [数号];
+      while (位置 < 句子.length && 数字点位.hasOwnProperty(句子.charAt(位置))) {
+        数字.push(数字点位[句子.charAt(位置)]);
+        位置 += 1;
+      }
+      if (上一个是词) {
+        各方.push("");
+      }
+      各方.push(数字.join(" "));
+      上一个是词 = true;
+    } else if (标点点位.hasOwnProperty(当前)) {
+      if (!上一个是词) {
+        process.stderr.write("没法点字：认不出\n");
+        return 2;
+      }
+      各方.push(标点点位[当前].join(" "));
+      位置 += 1;
+    } else if (字表[当前]) {
+      var 词长 = 1;
+      for (var i = 0; i < 词表.length; i += 1) {
+        var 词 = 词表[i];
+        if (词.length > 词长 && 句子.slice(位置, 位置 + 词.length) === 词 && 词.charAt(0) === 当前) {
+          词长 = 词.length;
+        }
+      }
+      if (上一个是词) {
+        各方.push("");
+      }
+      if (词长 === 1) {
+        各方.push(字表[当前].带调.join(" "));
+      } else {
+        for (var j = 位置; j < 位置 + 词长; j += 1) {
+          var 词里的字 = 句子.charAt(j);
+          if (!字表[词里的字]) {
+            process.stderr.write("没法点字：认不出\n");
+            return 2;
+          }
+          各方.push(字表[词里的字].不带调.join(" "));
+        }
+      }
+      位置 += 词长;
+      上一个是词 = true;
+    } else {
+      process.stderr.write("没法点字：认不出\n");
+      return 2;
+    }
+  }
+
+  process.stdout.write(各方.join(" ") + "\n");
   return 0;
 }
 
