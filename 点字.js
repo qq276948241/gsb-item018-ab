@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 "use strict";
 
-// 现在只认一个汉字，并且这个字要带调。词表先放着，整句还没接上。
-
 var 字表 = {
   "你": { 带调: ["1345", "24", "3"], 不带调: ["1345", "24"] },
   "好": { 带调: ["125", "235", "3"], 不带调: ["125", "235"] },
@@ -16,17 +14,93 @@ var 字表 = {
 
 var 词表 = ["中国人", "你好", "中国", "人民", "北京"];
 
+var 数字表 = {
+  "0": "245",
+  "1": "1",
+  "2": "12",
+  "3": "14",
+  "4": "145",
+  "5": "15",
+  "6": "124",
+  "7": "1245",
+  "8": "125",
+  "9": "24"
+};
+
+var 标点表 = {
+  "。": "5 23",
+  "，": "5",
+  "？": "5 3",
+  "！": "56 2"
+};
+
+function 切句(句子) {
+  var 片段 = [];
+  var 位置 = 0;
+  while (位置 < 句子.length) {
+    var 字 = 句子[位置];
+    if (数字表[字]) {
+      var 终点 = 位置;
+      while (终点 < 句子.length && 数字表[句子[终点]]) {
+        终点++;
+      }
+      var 点位 = ["3456"];
+      for (var i = 位置; i < 终点; i++) {
+        点位.push(数字表[句子[i]]);
+      }
+      片段.push({ 类型: "词", 点位: 点位.join(" ") });
+      位置 = 终点;
+      continue;
+    }
+    if (标点表[字]) {
+      片段.push({ 类型: "标点", 点位: 标点表[字] });
+      位置++;
+      continue;
+    }
+    var 命中 = null;
+    for (var j = 0; j < 词表.length; j++) {
+      var 词 = 词表[j];
+      if (句子.substr(位置, 词.length) === 词 && (!命中 || 词.length > 命中.length)) {
+        命中 = 词;
+      }
+    }
+    if (命中) {
+      var 不带调 = [];
+      for (var k = 0; k < 命中.length; k++) {
+        不带调.push(字表[命中[k]].不带调.join(" "));
+      }
+      片段.push({ 类型: "词", 点位: 不带调.join(" ") });
+      位置 += 命中.length;
+      continue;
+    }
+    if (字表[字]) {
+      片段.push({ 类型: "词", 点位: 字表[字].带调.join(" ") });
+      位置++;
+      continue;
+    }
+    return null;
+  }
+  return 片段;
+}
+
 function 主程序(参数) {
-  if (参数.length !== 1) {
+  if (参数.length !== 1 || 参数[0].length === 0) {
     process.stderr.write("没法点字：认不出\n");
     return 2;
   }
-  var 字 = 参数[0];
-  if (字.length !== 1 || !字表[字]) {
+  var 片段 = 切句(参数[0]);
+  if (!片段 || 片段.length === 0) {
     process.stderr.write("没法点字：认不出\n");
     return 2;
   }
-  process.stdout.write(字表[字].带调.join(" ") + "\n");
+  var 输出 = "";
+  for (var i = 0; i < 片段.length; i++) {
+    if (i > 0) {
+      输出 += 片段[i].类型 === "标点" ? " " : "  ";
+    }
+    输出 += 片段[i].点位;
+  }
+  process.stdout.write(输出 + "\n");
   return 0;
 }
 
@@ -34,4 +108,4 @@ if (require.main === module) {
   process.exit(主程序(process.argv.slice(2)));
 }
 
-module.exports = { 主程序: 主程序, 字表: 字表, 词表: 词表 };
+module.exports = { 主程序: 主程序, 字表: 字表, 词表: 词表, 数字表: 数字表, 标点表: 标点表, 切句: 切句 };
